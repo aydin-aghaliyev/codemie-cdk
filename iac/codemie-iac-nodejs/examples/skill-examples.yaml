@@ -1,0 +1,228 @@
+# ============================================
+# SKILL CONFIGURATION EXAMPLES
+# ============================================
+#
+# This file contains detailed examples for defining skills in Codemie IaC.
+# Skills are defined in the resources.skills section of codemie.yaml.
+#
+# Two shapes are supported, and you can mix both in the same list:
+#   1. Single-file skill  - one entry, one .skill.md file (name/description written by hand)
+#   2. source_dir         - a folder of skill subdirectories, expanded into one skill per
+#                           subdirectory that contains a SKILL.md
+
+# ============================================
+# SKILL STRUCTURE IN CODEMIE.YAML
+# ============================================
+#
+# resources:
+#   skills:
+#     - name: my-skill                  # REQUIRED (single-file shape): unique skill name
+#       description: What it does       # REQUIRED: 10-1000 characters, see notes below
+#       file: ./skills/my-skill.skill.md  # REQUIRED unless 'content' is given
+#       content: inline text             # Alternative to 'file' (exactly one of the two)
+#       categories: [general]            # Optional: category labels
+#       visibility: project              # Optional: "project" | "public" (default: "project")
+#
+#     - source_dir: ./skills/engineering # A folder of skill subdirectories, expanded below
+#       ignore_file: ./skills/engineering/.codemie-skills-ignore.yaml  # Optional
+#       categories: [engineering]        # Inherited by every expanded skill
+#       visibility: project              # Inherited by every expanded skill
+#       group: engineering-team          # Inherited by every expanded skill (passthrough only)
+
+# ============================================
+# 1. MINIMAL SINGLE-FILE SKILL
+# ============================================
+# The absolute minimum configuration required
+
+minimal_skill:
+  name: code-review-checklist
+  description: Checklist the assistant walks through when reviewing a pull request
+  file: ./skills/code-review-checklist.skill.md
+  # All other fields will use defaults:
+  # - categories: none
+  # - visibility: project
+
+# ============================================
+# 2. SINGLE-FILE SKILL WITH CATEGORIES AND VISIBILITY
+# ============================================
+
+categorized_skill:
+  name: incident-runbook
+  description: Step-by-step runbook the assistant follows when triaging a production incident
+  file: ./skills/incident-runbook.skill.md
+  categories: [engineering, on-call]
+  visibility: project
+
+# ============================================
+# 3. SINGLE-FILE SKILL WITH INLINE CONTENT
+# ============================================
+# Exactly one of 'file' or 'content' is required - inline content skips the file entirely
+
+inline_content_skill:
+  name: standup-format
+  description: Format the assistant uses when summarizing a daily standup update
+  content: |
+    Summarize the update in three sections: Yesterday, Today, Blockers.
+    Keep each section to one or two sentences and call out any blocker explicitly.
+  visibility: project
+
+# ============================================
+# 4. A FOLDER OF SKILL DIRECTORIES (source_dir)
+# ============================================
+# Point source_dir at a folder that already holds one subdirectory per skill - the
+# layout produced by skill authoring tools - instead of listing every skill by hand.
+#
+# Given this layout:
+#
+#   skills/engineering/
+#   ├── code-review-checklist/
+#   │   └── SKILL.md
+#   ├── incident-runbook/
+#   │   └── SKILL.md
+#   └── draft-idea/            # no SKILL.md here -> skipped silently
+#       └── notes.md
+#
+# ...the entry below expands into one skill per immediate subdirectory that directly
+# contains a SKILL.md. There is no recursion into deeper levels, and skills are always
+# expanded in sorted order of their subdirectory names.
+
+skill_source_dir:
+  source_dir: ./skills/engineering
+  categories: [engineering]     # Inherited by every expanded skill
+  visibility: project           # Inherited by every expanded skill
+  group: engineering-team       # Inherited by every expanded skill (passthrough label only;
+                                 # excluded from change detection, does not split or migrate)
+
+# SKILL.md may open with YAML front matter (a UTF-8 BOM and CRLF line endings are
+# tolerated); everything after the front matter becomes the skill's content:
+#
+#   ---
+#   name: code-review-checklist
+#   description: Checklist the assistant walks through when reviewing a pull request
+#   ---
+#   # Code Review Checklist
+#   ...
+#
+# 'name' falls back to the directory name when the front matter omits it. 'description'
+# has no fallback - it must be present in the front matter and fall within 10-1000
+# characters, or expansion fails for that skill (see notes below).
+
+# ============================================
+# 5. A FOLDER OF SKILL DIRECTORIES WITH ignore_file
+# ============================================
+# ignore_file points at a YAML file listing subdirectory names to skip during expansion
+
+skill_source_dir_with_ignore:
+  source_dir: ./skills/engineering
+  ignore_file: ./skills/engineering/.codemie-skills-ignore.yaml
+  categories: [engineering]
+  visibility: project
+
+# skills/engineering/.codemie-skills-ignore.yaml:
+#
+#   skills:
+#     - draft-idea
+
+# ============================================
+# 6. COMPANION FILES (ship a whole skill directory)
+# ============================================
+# A skill whose 'file' points at a SKILL.md - every skill expanded from source_dir, plus
+# any hand-written entry pointing at one - also ships the rest of its directory. Every
+# other file beneath it, at any depth, becomes a companion file sent with the skill:
+#
+#   skills/engineering/code-review-checklist/
+#   ├── SKILL.md                 # the skill's own content, never a companion file
+#   ├── .codemie-exclude         # optional, never shipped itself
+#   ├── checklist.md             # companion file
+#   ├── templates/pr-body.md     # companion file (relative path preserved)
+#   └── assets/diagram.png       # companion file (binary -> shipped base64)
+#
+# A single-file skill ('file: ./skills/foo.skill.md') or an inline-content skill has none.
+#
+# Always excluded, whatever patterns you write: SKILL.md and .codemie-exclude themselves,
+# the node_modules, .git and evals directories, and the lockfiles package-lock.json,
+# npm-shrinkwrap.json, yarn.lock, pnpm-lock.yaml, bun.lockb, composer.lock, Gemfile.lock,
+# Cargo.lock and poetry.lock. Symlinks are skipped rather than followed.
+#
+# .codemie-exclude is optional and read only from the skill's own directory; its patterns
+# are matched against skill-relative paths, one per line:
+#
+#   skills/engineering/code-review-checklist/.codemie-exclude:
+#
+#     # lines starting with '#' are comments, blank lines are ignored
+#     drafts/notes.md        # an exact path
+#     vendor/lib             # that path and everything beneath it
+#     build/                 # trailing slash: everything beneath build/
+#     secret.txt             # no '/': matches that basename at any depth
+#     *.log                  # '*' matches anything except '/'
+#     docs/**/internal.md    # '**' crosses '/'
+#     draft?.md              # '?' is exactly one character, never '/'
+#     {foo,bar}.txt          # '{a,b}' is alternation
+#
+# Text and binary files are detected automatically: content with no NUL byte that
+# round-trips exactly as UTF-8 is sent as text, anything else is base64-encoded, so
+# binaries survive deploy and backup byte-for-byte.
+#
+# Companion files are tracked in .codemie/state.json by content hash (never file bodies),
+# so adding, editing or removing one marks the skill as changed in 'preview' and updates
+# it in 'deploy' even when SKILL.md is untouched; removing the last one clears the skill's
+# companion files on the platform.
+#
+# 'codemie backup' writes a skill that has companion files as skills/<name>/SKILL.md with
+# the companions beside it, and keeps the flat skills/<name>.skill.md layout for a skill
+# with none. 'codemie import' fetches companion files too and writes the same two layouts.
+
+# ============================================
+# FIELD DESCRIPTIONS & NOTES
+# ============================================
+#
+# name (REQUIRED in the single-file shape):
+#   - Unique skill name
+#   - For source_dir, taken from SKILL.md front matter, falling back to the directory name
+#   - Names produced by source_dir expansion must be kebab-case, 3-64 characters, and
+#     start and end with a letter or digit; this rule only applies to expanded skills -
+#     existing hand-written names in the single-file shape are unaffected
+#
+# description (REQUIRED):
+#   - Must be 10-1000 characters
+#   - BEHAVIOR CHANGE: an out-of-range description now fails locally in
+#     'validate', 'preview' and 'deploy', naming the skill, its actual length and the
+#     allowed range. It previously reached the platform and failed there with an opaque
+#     API error. There is no placeholder description and no truncation - out of range is
+#     always an error, for both shapes.
+#   - Under 'codemie validate --check-api', each skill's CONTENT length is additionally
+#     checked against the platform's own configured limits, read live from the API
+#     rather than hard-coded in the CLI.
+#
+# file / content (exactly one REQUIRED per skill entry):
+#   - file: path to a .skill.md file, relative to codemie.yaml
+#   - content: the skill's content given inline
+#
+# categories (OPTIONAL):
+#   - Array of category labels
+#   - On a source_dir entry, inherited by every expanded skill
+#
+# visibility (OPTIONAL):
+#   - "project" or "public"
+#   - Default: "project"
+#   - On a source_dir entry, inherited by every expanded skill
+#
+# source_dir (folder-expansion shape only):
+#   - Folder whose immediate subdirectories each containing a SKILL.md become one skill
+#   - Subdirectories without a SKILL.md are skipped silently; no recursion into deeper levels
+#   - Expansion order is the subdirectory names, sorted, so two loads produce identical results
+#   - A source_dir that does not exist is an error naming both the resolved path and the
+#     offending source_dir entry
+#
+# ignore_file (OPTIONAL, folder-expansion shape only):
+#   - Path to a YAML file shaped `skills: [<dirName>, ...]`
+#   - Listed directory names are skipped during expansion
+#
+# .codemie-exclude (OPTIONAL, one per skill directory):
+#   - Lives in the skill's own directory next to SKILL.md; never shipped as a companion file
+#   - Drops matching companion files and directories from what the skill ships (see section 6)
+#
+# group (OPTIONAL, folder-expansion shape only):
+#   - Passthrough label only, inherited by every expanded skill
+#   - Deliberately excluded from change detection
+#   - Does not split, replace or migrate anything

@@ -1,0 +1,480 @@
+# ============================================
+# WORKFLOW CONFIGURATION EXAMPLES
+# ============================================
+#
+# This file contains detailed examples for creating workflows in Codemie.
+# Workflows define multi-step AI agent processes that can include multiple
+# assistants, state management, and complex control flow.
+#
+# Based on codemie-sdk v1.x and Codemie Workflow YAML specification
+
+# ============================================
+# WORKFLOW STRUCTURE IN CODEMIE.YAML
+# ============================================
+#
+# In codemie.yaml, workflows are defined at the top level:
+#
+# resources:
+#   workflows:
+#     - id: "uuid-here"              # Optional: if provided, UPDATE; if not, CREATE
+#       name: workflow-name
+#       description: Workflow description
+#       definition: ./workflows/workflow-name.yaml  # Path to workflow definition file
+#       mode: Sequential            # or Autonomous
+#       shared: true                # Share with project members
+#       icon_url: https://...       # Optional icon URL
+
+# ============================================
+# MINIMAL WORKFLOW EXAMPLE
+# ============================================
+# File: workflows/minimal-workflow.yaml
+
+minimal_workflow:
+  # Minimal workflow with inline assistant and single state
+  assistants:
+    - id: simple_assistant
+      model: 'gpt-4o-mini'
+      name: Simple Assistant
+      system_prompt: You are a helpful assistant.
+
+  states:
+    - id: start
+      assistant_id: simple_assistant
+      task: |
+        Process this request: {{ user_input }}
+      output_schema: |
+        {
+          "result": "Processing result",
+          "success": "Boolean true if request is processed successfully"
+        }
+      next:
+        state_id: end
+
+
+# ============================================
+# WORKFLOW WITH EXISTING ASSISTANTS (RECOMMENDED)
+# ============================================
+# File: workflows/existing-assistants-workflow.yaml
+#
+# ✨ RECOMMENDED: Use assistant_name to reference assistants from codemie.yaml
+# During deploy, names are resolved to UUIDs internally (workflow YAML stays unchanged)
+#
+# IMPORTANT: Always use assistant_name, NOT assistant_id in workflow YAML files!
+# The system requires assistant_name and will throw error if it's missing.
+
+existing_assistants_workflow:
+  # Reference existing assistants by NAME (from codemie.yaml)
+  assistants:
+    - id: analyzer
+      assistant_name: Full Featured Assistant     # Name from codemie.yaml - REQUIRED
+    
+    - id: reviewer
+      assistant_name: Sub Assistant Helper        # Name from codemie.yaml - REQUIRED
+
+  states:
+    - id: analyze
+      assistant_id: analyzer
+      task: |
+        Analyze the following input: {{ user_input }}
+      output_schema: |
+        {
+          "analysis": "Analysis results",
+          "key_points": ["Array of key points"]
+        }
+      next:
+        state_id: review
+
+    - id: review
+      assistant_id: reviewer
+      task: |
+        Review the analysis: {{ analysis }}
+        Key points: {{ key_points }}
+      output_schema: |
+        {
+          "feedback": "Review feedback",
+          "approved": "Boolean"
+        }
+      next:
+        state_id: end
+
+# Note: The workflow YAML file stays unchanged after deployment.
+# Names are resolved to UUIDs internally during deployment, but the file remains portable.
+
+
+# ============================================
+# COMPLEX WORKFLOW WITH CONDITIONALS
+# ============================================
+# File: workflows/conditional-workflow.yaml
+
+conditional_workflow:
+  assistants:
+    - id: validator
+      model: 'gpt-4o'
+      name: Input Validator
+      system_prompt: Validate input and return structured data.
+    
+    - id: processor_success
+      model: 'gpt-4o'
+      name: Success Processor
+      system_prompt: Process successful validations.
+    
+    - id: processor_error
+      model: 'gpt-4o-mini'
+      name: Error Handler
+      system_prompt: Handle validation errors.
+
+  states:
+    - id: validate
+      assistant_id: validator
+      task: |
+        Validate this input: {{ user_input }}
+      output_schema: |
+        {
+          "is_valid": "Boolean",
+          "error_message": "String (if invalid)",
+          "validated_data": "Object (if valid)"
+        }
+      next:
+        # Conditional branching based on output
+        condition: "{{ is_valid }}"  # If true, go to success_path
+        state_id: success_path       # Default path
+        switch:
+          - condition: "{{ not is_valid }}"
+            state_id: error_path
+
+    - id: success_path
+      assistant_id: processor_success
+      task: |
+        Process validated data: {{ validated_data }}
+      output_schema: |
+        {
+          "result": "Processing result"
+        }
+      next:
+        state_id: end
+
+    - id: error_path
+      assistant_id: processor_error
+      task: |
+        Handle error: {{ error_message }}
+      output_schema: |
+        {
+          "error_handled": "Boolean",
+          "suggestion": "String"
+        }
+      next:
+        state_id: end
+
+
+# ============================================
+# WORKFLOW WITH RETRY POLICY
+# ============================================
+# File: workflows/retry-workflow.yaml
+
+retry_workflow:
+  assistants:
+    - id: api_caller
+      model: 'gpt-4o'
+      name: API Interaction Assistant
+      system_prompt: Interact with external APIs.
+
+  states:
+    - id: call_external_api
+      assistant_id: api_caller
+      task: |
+        Call external API with these parameters: {{ api_params }}
+      output_schema: |
+        {
+          "api_response": "API response data",
+          "success": "Boolean"
+        }
+      retry_policy:
+        initial_interval: 1              # Wait 1 second before first retry
+        backoff_factor: 2                # Double wait time on each retry
+        max_interval: 10                 # Maximum wait time between retries
+        max_attempts: 3                  # Try up to 3 times total
+      next:
+        state_id: process_response
+
+    - id: process_response
+      assistant_id: api_caller
+      task: |
+        Process API response: {{ api_response }}
+      output_schema: |
+        {
+          "processed_data": "Processed data"
+        }
+      next:
+        state_id: end
+
+
+# ============================================
+# WORKFLOW WITH OVERRIDE MODEL
+# ============================================
+# File: workflows/model-override-workflow.yaml
+
+model_override_workflow:
+  assistants:
+    # Reference existing assistant but override its model
+    - id: test_assistant
+      assistant_name: Full Featured Assistant  # Use assistant_name, not assistant_id
+      model: 'gpt-4.1'  # Override the assistant's default model
+
+  states:
+    - id: process
+      assistant_id: test_assistant
+      task: |
+        Process with overridden model: {{ user_input }}
+      output_schema: |
+        {
+          "result": "Processing result"
+        }
+      next:
+        state_id: end
+
+
+# ============================================
+# WORKFLOW WITH ITERATION (LOOP)
+# ============================================
+# File: workflows/iteration-workflow.yaml
+
+iteration_workflow:
+  assistants:
+    - id: item_processor
+      model: 'gpt-4o'
+      name: Item Processor
+      system_prompt: Process individual items.
+    
+    - id: aggregator
+      model: 'gpt-4o'
+      name: Results Aggregator
+      system_prompt: Aggregate results from multiple items.
+
+  states:
+    - id: process_items
+      assistant_id: item_processor
+      task: |
+        Process this item: {{ iter_item }}
+      output_schema: |
+        {
+          "processed_item": "Processed item data"
+        }
+      next:
+        iter_key: items              # Iterate over {{ items }} array
+        output_key: processed_items  # Store results in {{ processed_items }}
+        state_id: aggregate_results
+        finish_iteration: true
+
+    - id: aggregate_results
+      assistant_id: aggregator
+      task: |
+        Aggregate all processed items: {{ processed_items }}
+      output_schema: |
+        {
+          "summary": "Aggregated summary",
+          "total_count": "Number of items processed"
+        }
+      next:
+        state_id: end
+
+
+# ============================================
+# REAL-WORLD EXAMPLE: TEST CASE GENERATION
+# ============================================
+# File: workflows/test-case-generation.yaml
+
+test_case_generation_workflow:
+  assistants:
+    - id: checklist_generator
+      assistant_name: Checklist Generator Assistant  # Use assistant_name from codemie.yaml
+    
+    - id: jira_test_management
+      assistant_name: JIRA Test Management Tool Assistant  # Use assistant_name from codemie.yaml
+      model: 'gpt-4.1'  # Optional: override model
+    
+    - id: webhook_parser
+      model: 'gpt-4o-mini'
+      name: Webhook Parser
+      system_prompt: |
+        Extract JIRA key from webhook payload.
+        Return only the key in the specified format.
+
+  states:
+    - id: parse_webhook
+      assistant_id: webhook_parser
+      task: |
+        Extract the JIRA key from: {{ webhook_payload }}
+      output_schema: |
+        {
+          "jira_key": "JIRA issue key (e.g., PROJ-123)",
+          "success": "Boolean"
+        }
+      next:
+        state_id: generate_checklist
+
+    - id: generate_checklist
+      assistant_id: checklist_generator
+      task: |
+        Generate test case checklist for: {{ jira_key }}
+      output_schema: |
+        {
+          "jira_key": "{{ jira_key }}",
+          "checklist_items": ["Array of test case descriptions"],
+          "success": "Boolean"
+        }
+      next:
+        state_id: create_test_cases
+
+    - id: create_test_cases
+      assistant_id: jira_test_management
+      task: |
+        Create test cases in Jira:
+        - JIRA key: {{ jira_key }}
+        - Test cases: {{ checklist_items }}
+      output_schema: |
+        {
+          "test_case_ids": ["Array of created test case IDs"],
+          "folder_path": "Created folder path",
+          "success": "Boolean"
+        }
+      retry_policy:
+        initial_interval: 1
+        backoff_factor: 1
+        max_interval: 1
+        max_attempts: 2
+      next:
+        state_id: link_test_cases
+
+    - id: link_test_cases
+      assistant_id: jira_test_management
+      task: |
+        Link test cases to JIRA ticket:
+        - Original JIRA: {{ jira_key }}
+        - Test case IDs: {{ test_case_ids }}
+      output_schema: |
+        {
+          "linked_count": "Number of linked test cases",
+          "success": "Boolean"
+        }
+      next:
+        state_id: end
+
+
+# ============================================
+# WORKFLOW YAML CONFIG FIELDS REFERENCE
+# ============================================
+
+# assistants: Array
+#   - id: string (required)               # Local ID for referencing in states
+#     assistant_name: string (REQUIRED)   # Name from codemie.yaml - use this to reference existing assistants
+#     OR (for inline assistants):
+#     name: string (required)             # Assistant name (if creating inline)
+#     model: string (required)            # LLM model (e.g., 'gpt-4o', 'gpt-4o-mini')
+#     system_prompt: string (required)    # System prompt (if creating inline)
+#     
+#     Optional fields (both existing and inline):
+#     model: string (optional)            # Override model for existing assistant
+#     temperature: number (optional)      # Temperature setting (0.0 - 1.0)
+#     datasource_ids: array (optional)    # Array of datasource IDs to attach
+#     tools: array (optional)             # Array of tool configurations
+
+# states: Array
+#   - id: string (required)               # Unique state identifier
+#     assistant_id: string (required)     # Reference to assistant (from assistants array)
+#     task: string (required)             # Task prompt (supports {{ variable }} syntax)
+#     output_schema: string (optional)    # JSON schema for expected output
+#     next:                               # Next state configuration
+#       state_id: string                  # Next state to execute
+#       condition: string                 # Conditional expression
+#       switch: array                     # Array of conditional branches
+#       iter_key: string                  # Iterate over array variable
+#       output_key: string                # Store iteration results
+#       keep_history: boolean             # Keep conversation history
+#     retry_policy:                       # Retry configuration
+#       initial_interval: number          # Initial retry delay (seconds)
+#       backoff_factor: number            # Delay multiplier for each retry
+#       max_interval: number              # Maximum retry delay (seconds)
+#       max_attempts: number              # Maximum retry attempts
+#     interrupt_before: boolean           # Pause before executing state
+#     custom_node_id: string              # Custom node type
+#     resolve_dynamic_values_in_prompt: boolean  # Resolve variables in prompt
+
+
+# ============================================
+# WORKFLOW MODES
+# ============================================
+
+# Sequential Mode:
+# - States execute one after another in defined order
+# - Variables from previous states are available to next states
+# - Control flow defined by 'next' configuration
+# - Supports conditionals, loops, and branching
+
+# Autonomous Mode:
+# - AI agent decides which states to execute based on context
+# - More flexible but less predictable
+# - Useful for complex decision-making scenarios
+# - Requires supervisor prompt to guide agent behavior
+
+
+# ============================================
+# VARIABLE TEMPLATING
+# ============================================
+
+# Variables in task prompts use Jinja2-like syntax:
+# - {{ variable_name }}                  # Access variable
+# - {{ previous_state.output_field }}    # Access nested fields
+# - {{ iter_item }}                      # Current item in iteration
+# - {{ user_input }}                     # Initial user input
+
+# Special variables:
+# - user_input: Initial workflow input
+# - webhook_payload: Webhook data (if triggered by webhook)
+# - All output fields from previous states are available
+
+
+# ============================================
+# COMMON PATTERNS
+# ============================================
+
+# Pattern 1: Simple Sequential Workflow
+# - Single path from start to end
+# - Each state passes data to the next
+# - Use for straightforward multi-step processes
+
+# Pattern 2: Conditional Branching
+# - Use 'condition' or 'switch' in next configuration
+# - Different paths based on previous state output
+# - Use for decision-making workflows
+
+# Pattern 3: Iteration/Loops
+# - Use 'iter_key' to loop over array
+# - Use 'output_key' to collect results
+# - Use for batch processing
+
+# Pattern 4: Retry on Failure
+# - Add 'retry_policy' to states that might fail
+# - Useful for API calls or unreliable operations
+# - Configure backoff strategy
+
+# Pattern 5: Mixed Assistants
+# - Combine existing assistants with inline ones
+# - Override models for specific tasks
+# - Use specialized assistants for different steps
+
+
+# ============================================
+# BEST PRACTICES
+# ============================================
+
+# 1. Always define clear output_schema for state outputs
+# 2. Use descriptive state IDs (e.g., 'parse_input', 'validate_data')
+# 3. Keep task prompts focused and specific
+# 4. Use retry_policy for external API interactions
+# 5. Test workflows with simple inputs first
+# 6. Document complex conditionals and loops
+# 7. Use {{ variable }} syntax consistently
+# 8. Store workflow YAML files in ./workflows/ directory
+# 9. Reference workflow YAML files in codemie.yaml
+# 10. Use 'shared: true' to allow team access
+

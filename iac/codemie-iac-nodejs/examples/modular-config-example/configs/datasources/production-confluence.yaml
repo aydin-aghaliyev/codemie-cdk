@@ -1,0 +1,6 @@
+$ref: datasource_defaults.confluence
+name: Production Confluence KB
+description: Production Confluence knowledge base
+setting_id: $ref:imported.integrations.confluence_connection.id
+cql: space = PROD
+summarization_model: gpt-4.1

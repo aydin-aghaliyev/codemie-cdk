@@ -1,0 +1,571 @@
+# ============================================
+# ASSISTANT CONFIGURATION EXAMPLES
+# ============================================
+#
+# This file contains detailed examples for creating assistants in Codemie.
+# Based on codemie-sdk v1.x AssistantCreateParamsSchema (src/schemas/assistant.ts)
+#
+# All examples are based on the actual SDK schema and real-world configurations.
+
+# ============================================
+# ASSISTANT STRUCTURE IN CODEMIE.YAML
+# ============================================
+#
+# In codemie.yaml, assistants are defined in the resources section:
+#
+# resources:
+#   assistants:
+#     - name: my-assistant              # REQUIRED: Human-readable name
+#       description: Description        # REQUIRED: What the assistant does
+#       prompt: ./prompts/file.md       # REQUIRED: Path to system prompt file
+#       model: gpt-4o                   # REQUIRED: LLM model to use
+#       temperature: 0.7                # Optional: 0.0-1.0 (default varies by model)
+#       top_p: 0.9                      # Optional: Top-p sampling
+#       shared: true                    # Optional: Share with project (default: true)
+#       is_react: true                  # Optional: Enable ReAct mode (default: true)
+#       is_global: false                # Optional: Global assistant (default: false)
+#       slug: my-assistant-slug         # Optional: URL-friendly identifier (auto-generated if not provided)
+#       icon_url: https://...           # Optional: Assistant avatar URL
+#       conversation_starters: []       # Optional: Suggested conversation starters
+#       context: []                     # Optional: Attached datasources
+#       toolkits: []                    # Optional: Tools and integrations
+#       mcp_servers: []                 # Optional: MCP server integrations
+#       sub_assistants: []              # Optional: Sub-assistants (by name)
+#       skills: []                      # Optional: Skill names to attach (deployed before assistants)
+
+# ============================================
+# SDK SCHEMA REFERENCE
+# ============================================
+#
+# Based on AssistantCreateParamsSchema (lines 85-143 in index.js):
+#
+# REQUIRED FIELDS:
+# - name: string
+# - description: string
+# - system_prompt: string
+# - project: string (auto-filled from codemie.yaml project.name)
+# - context: array (can be empty)
+# - llm_model_type: string
+# - toolkits: array (can be empty)
+# - conversation_starters: array (can be empty)
+# - assistant_ids: array (sub-assistants, can be empty)
+#
+# OPTIONAL FIELDS:
+# - icon_url: string
+# - shared: boolean
+# - is_react: boolean
+# - is_global: boolean
+# - slug: string
+# - temperature: number
+# - top_p: number
+# - mcp_servers: array
+
+# ============================================
+# 1. MINIMAL ASSISTANT
+# ============================================
+# The absolute minimum configuration required
+
+minimal_assistant:
+  name: Simple Assistant
+  description: A basic assistant with minimal configuration
+  prompt: ./prompts/simple.md
+  model: gpt-4o
+  # All other fields will use defaults:
+  # - temperature: model default
+  # - shared: true
+  # - is_react: true
+  # - is_global: false
+  # - context: []
+  # - toolkits: []
+  # - conversation_starters: []
+  # - sub_assistants: []
+
+# ============================================
+# 2. ASSISTANT WITH TEMPERATURE & TOP_P
+# ============================================
+# Control model behavior with temperature and top_p sampling
+
+model_tuned_assistant:
+  name: Precise Code Reviewer
+  description: Code review assistant with low temperature for consistency
+  prompt: ./prompts/code-reviewer.md
+  model: claude-3-7-sonnet
+  temperature: 0.1        # Low temperature = more deterministic
+  top_p: 0.9              # Top-p sampling for diversity
+  shared: true
+
+creative_assistant:
+  name: Creative Writer
+  description: Creative writing assistant with high temperature
+  prompt: ./prompts/creative-writer.md
+  model: gpt-4o
+  temperature: 0.9        # High temperature = more creative/random
+  top_p: 0.95
+  shared: true
+
+# ============================================
+# 3. ASSISTANT WITH ICON & CONVERSATION STARTERS
+# ============================================
+# Enhance UX with custom icon and conversation starters
+
+user_friendly_assistant:
+  name: BA Helper
+  description: Business Analyst assistant with guided prompts
+  prompt: ./prompts/ba-helper.md
+  model: gpt-4.1
+  temperature: 0.5
+  shared: true
+  icon_url: https://i.imgur.com/EFuRPHZ.png
+  conversation_starters:
+    - Help me create a user story
+    - Review my acceptance criteria
+    - Generate test scenarios for this feature
+    - What's missing in this requirements document?
+
+# ============================================
+# 4. ASSISTANT WITH CODE CONTEXT (DATASOURCES)
+# ============================================
+# Attach code repositories for codebase-aware assistance
+
+code_aware_assistant:
+  name: Codebase Expert
+  description: Assistant with access to multiple repositories
+  prompt: ./prompts/codebase-expert.md
+  model: claude-3-7-sonnet
+  temperature: 0.3
+  shared: true
+  context:
+    - context_type: code
+      name: main-backend-repo      # References datasource by name
+    - context_type: code
+      name: frontend-repo
+    - context_type: code
+      name: shared-libraries
+
+# ============================================
+# 5. ASSISTANT WITH KNOWLEDGE BASE CONTEXT
+# ============================================
+# Attach Jira/Confluence for domain knowledge
+
+knowledge_base_assistant:
+  name: Product Knowledge Expert
+  description: Assistant with access to Jira and Confluence
+  prompt: ./prompts/knowledge-expert.md
+  model: gpt-4.1
+  temperature: 0.4
+  shared: true
+  context:
+    - context_type: knowledge_base
+      name: jira-issues            # Jira datasource
+    - context_type: knowledge_base
+      name: confluence-docs        # Confluence datasource
+
+# ============================================
+# 6. ASSISTANT WITH MIXED CONTEXT
+# ============================================
+# Combine code and knowledge base context
+
+full_context_assistant:
+  name: Full Stack BA Assistant
+  description: Assistant with code and documentation context
+  prompt: ./prompts/fullstack-ba.md
+  model: claude-3-7-sonnet
+  temperature: 0.5
+  shared: true
+  icon_url: https://example.com/icon.png
+  context:
+    # Code repositories
+    - context_type: code
+      name: backend-api
+    - context_type: code
+      name: frontend-ui
+    # Knowledge bases
+    - context_type: knowledge_base
+      name: jira-project-issues
+    - context_type: knowledge_base
+      name: confluence-documentation
+
+# ============================================
+# 7. ASSISTANT WITH GIT TOOLKIT
+# ============================================
+# Add Git operations (MR diffs, changes)
+
+git_assistant:
+  name: Git PR Reviewer
+  description: Reviews pull requests and analyzes changes
+  prompt: ./prompts/pr-reviewer.md
+  model: claude-3-7-sonnet
+  temperature: 0.3
+  shared: true
+  toolkits:
+    - toolkit: Git
+      label: Git Tools
+      settings_config: false
+      is_external: false
+      tools:
+        - name: git_merge_request_diffs
+          label: Get MR Diffs
+          settings_config: false
+        - name: git_merge_request_changes
+          label: Get MR Changes
+          settings_config: false
+
+# ============================================
+# 8. ASSISTANT WITH PROJECT MANAGEMENT TOOLKIT
+# ============================================
+# Add Jira and Confluence tools using $ref
+
+project_management_assistant:
+  name: Jira Confluence Helper
+  description: Manages Jira issues and Confluence pages
+  prompt: ./prompts/pm-helper.md
+  model: gpt-4o
+  temperature: 0.5
+  shared: true
+  toolkits:
+    - toolkit: Project Management
+      label: Project Management Tools
+      settings_config: false
+      is_external: false
+      tools:
+        - $ref: tool_definitions.jira_tool        # Reference from codemie.yaml
+        - $ref: tool_definitions.confluence_tool
+
+# Alternative: inline integration references
+project_management_assistant_inline:
+  name: PM Assistant (Inline)
+  description: PM assistant with inline integration references
+  prompt: ./prompts/pm-helper.md
+  model: gpt-4o
+  temperature: 0.5
+  shared: true
+  toolkits:
+    - toolkit: Project Management
+      label: PM Tools
+      settings_config: false
+      is_external: false
+      tools:
+        - name: generic_jira_tool
+          label: Generic Jira
+          settings_config: false
+          settings:
+            $ref: imported.integrations.jira_main  # Direct reference to integration
+        - name: generic_confluence_tool
+          label: Generic Confluence
+          settings_config: false
+          settings:
+            $ref: imported.integrations.confluence_main
+
+# ============================================
+# 9. ASSISTANT WITH OPENAPI TOOLKIT
+# ============================================
+# Integrate with external APIs via OpenAPI
+
+api_assistant:
+  name: API Integration Assistant
+  description: Interacts with external REST APIs
+  prompt: ./prompts/api-helper.md
+  model: gpt-4o
+  temperature: 0.6
+  shared: true
+  toolkits:
+    - toolkit: OpenAPI
+      label: External API
+      settings_config: false
+      is_external: false
+      tools:
+        - name: open_api
+          label: Invoke API
+          settings_config: false
+          settings:
+            $ref: imported.integrations.external_api
+
+# ============================================
+# 10. ASSISTANT WITH MCP SERVERS
+# ============================================
+# Integrate MCP (Model Context Protocol) servers
+
+mcp_assistant:
+  name: Design Assistant with Figma
+  description: Assistant with Figma MCP integration
+  prompt: ./prompts/design-helper.md
+  model: gpt-4o
+  temperature: 0.7
+  shared: true
+  mcp_servers:
+    - name: Figma
+      description: Figma MCP Server
+      enabled: true
+      command: npx
+      arguments: -y figma-developer-mcp --stdio
+      settings:
+        id: your-mcp-integration-id  # From Codemie Project Settings
+        credential_type: MCP
+        credential_values:
+          - key: FIGMA_API_KEY
+            value: your-figma-api-key
+
+# MCP with config object (alternative structure)
+mcp_assistant_with_config:
+  name: Figma Helper (Config)
+  description: Figma assistant with config-style MCP
+  prompt: ./prompts/figma-helper.md
+  model: gpt-4o
+  temperature: 0.7
+  shared: true
+  mcp_servers:
+    - name: Figma MCP
+      description: Figma integration
+      enabled: true
+      config:
+        command: npx
+        args:
+          - -y
+          - figma-developer-mcp
+          - --figma-api-key=your-key
+          - --stdio
+        env: {}
+        auth_token: optional-token
+
+# ============================================
+# 11. ASSISTANT WITH SUB-ASSISTANTS
+# ============================================
+# Delegate to specialized sub-assistants
+
+main_assistant_with_subs:
+  name: Senior BA Assistant
+  description: Main BA assistant that delegates to specialists
+  prompt: ./prompts/senior-ba.md
+  model: gpt-4.1
+  temperature: 0.5
+  shared: true
+  icon_url: https://example.com/senior-ba-icon.png
+  sub_assistants:
+    - BA Reviewer Assistant         # Reference by name
+    - Codebase Analyzer Assistant
+    - Feedback Hub Helper
+
+# ============================================
+# 12. FULL-FEATURED ASSISTANT
+# ============================================
+# Complete example with all possible features
+
+complete_assistant:
+  name: Ultimate BA Assistant
+  description: Full-featured BA assistant with all capabilities
+  prompt: ./prompts/ultimate-ba.md
+  model: gpt-4.1
+  temperature: 0.5
+  top_p: 0.9
+  shared: true
+  is_react: true
+  is_global: false
+  slug: ultimate-ba-assistant
+  icon_url: https://i.imgur.com/EFuRPHZ.png
+  
+  # Conversation starters
+  conversation_starters:
+    - Help me analyze this requirement
+    - Create a user story template
+    - Review my technical documentation
+    - Generate test scenarios
+  
+  # Context (datasources)
+  context:
+    # Code repositories
+    - context_type: code
+      name: backend-services
+    - context_type: code
+      name: frontend-apps
+    # Knowledge bases
+    - context_type: knowledge_base
+      name: jira-issues-datasource
+    - context_type: knowledge_base
+      name: confluence-pages-datasource
+  
+  # Toolkits
+  toolkits:
+    # Git toolkit
+    - toolkit: Git
+      label: Git Operations
+      settings_config: false
+      is_external: false
+      tools:
+        - name: git_merge_request_diffs
+          label: Get MR Diffs
+          settings_config: false
+    
+    # Project Management toolkit
+    - toolkit: Project Management
+      label: Jira & Confluence
+      settings_config: false
+      is_external: false
+      tools:
+        - $ref: tool_definitions.jira_tool
+        - $ref: tool_definitions.confluence_tool
+    
+    # OpenAPI toolkit
+    - toolkit: OpenAPI
+      label: External APIs
+      settings_config: false
+      is_external: false
+      tools:
+        - name: open_api
+          label: API Integration
+          settings_config: false
+          settings:
+            $ref: imported.integrations.external_api
+  
+  # MCP Servers
+  mcp_servers:
+    - name: Figma
+      description: Figma design integration
+      enabled: true
+      command: npx
+      arguments: -y figma-developer-mcp --stdio
+      settings:
+        id: figma-mcp-integration-id
+        credential_type: MCP
+  
+  # Sub-assistants
+  sub_assistants:
+    - Code Reviewer Assistant
+    - Documentation Generator
+    - Test Case Creator
+
+# ============================================
+# 13. REACT-MODE ASSISTANT
+# ============================================
+# Enable ReAct (Reasoning + Acting) mode for complex tasks
+
+react_assistant:
+  name: ReAct Problem Solver
+  description: Uses ReAct mode for step-by-step reasoning
+  prompt: ./prompts/react-solver.md
+  model: gpt-4.1
+  temperature: 0.6
+  shared: true
+  is_react: true              # Enable ReAct mode
+  toolkits:
+    - toolkit: Project Management
+      label: PM Tools
+      settings_config: false
+      is_external: false
+      tools:
+        - $ref: tool_definitions.jira_tool
+
+# ============================================
+# FIELD DESCRIPTIONS & NOTES
+# ============================================
+#
+# name (REQUIRED):
+#   - Human-readable assistant name
+#   - Must be unique within project
+#   - Used for referencing in sub_assistants and workflows
+#
+# description (REQUIRED):
+#   - Brief description of assistant's purpose
+#   - Displayed in UI
+#
+# prompt (REQUIRED in config, system_prompt in API):
+#   - Path to system prompt file (relative to codemie.yaml)
+#   - File content becomes system_prompt in API
+#
+# model (REQUIRED, llm_model_type in API):
+#   - LLM model identifier
+#   - Common values: gpt-4o, gpt-4.1, gpt-4o-mini, claude-3-7-sonnet, claude-3-5-sonnet
+#   - Check available models: client.llms.list()
+#
+# temperature (OPTIONAL):
+#   - Controls randomness (0.0 = deterministic, 1.0 = very random)
+#   - Default varies by model
+#   - Typical range: 0.0-1.0
+#
+# top_p (OPTIONAL):
+#   - Nucleus sampling parameter
+#   - Alternative to temperature
+#   - Typical range: 0.0-1.0
+#
+# shared (OPTIONAL):
+#   - Whether assistant is shared with project members
+#   - Default: true
+#   - SDK schema: optional boolean
+#
+# is_react (OPTIONAL):
+#   - Enable ReAct (Reasoning + Acting) mode
+#   - Default: true
+#   - Useful for complex multi-step reasoning tasks
+#
+# is_global (OPTIONAL):
+#   - Whether assistant is globally available (marketplace)
+#   - Default: false
+#   - IMPORTANT: For IaC, should ALWAYS be false
+#
+# slug (OPTIONAL):
+#   - URL-friendly identifier
+#   - Must be globally unique across all assistants
+#   - Auto-generated by platform if not provided
+#   - Format: lowercase, hyphens, no spaces
+#   - NOTE: In name-based IaC, slug is rarely needed
+#
+# icon_url (OPTIONAL):
+#   - URL to assistant avatar/icon image
+#   - Displayed in UI
+#
+# conversation_starters (OPTIONAL):
+#   - Array of suggested conversation starters
+#   - Displayed in UI to help users start conversations
+#   - SDK schema: array of strings, can be empty
+#
+# context (REQUIRED in API, can be empty array):
+#   - Array of attached datasources
+#   - Each item has:
+#     - context_type: "code" or "knowledge_base"
+#     - name: datasource name (resolved to ID during deployment)
+#
+# toolkits (REQUIRED in API, can be empty array):
+#   - Array of toolkit configurations
+#   - Each toolkit has:
+#     - toolkit: toolkit type (Git, Project Management, OpenAPI, FileSystem)
+#     - label: display name
+#     - settings_config: whether toolkit needs settings
+#     - is_external: whether toolkit is external
+#     - tools: array of tool configurations
+#
+# mcp_servers (REQUIRED in API, can be empty array):
+#   - Array of MCP server configurations
+#   - Each MCP server has:
+#     - name: server name
+#     - description: optional description
+#     - enabled: boolean
+#     - command: executable command (npx, uvx, etc.)
+#     - arguments: command-line arguments
+#     - config: alternative structured configuration
+#     - settings: integration settings
+#
+# sub_assistants (assistant_ids in API):
+#   - Array of sub-assistant names
+#   - Resolved to UUIDs during deployment
+#   - Sub-assistants are delegated to by main assistant
+
+# ============================================
+# COMMON PATTERNS
+# ============================================
+#
+# 1. Simple Assistant: Just name, description, prompt, model
+# 2. Code-Aware: Add context with code datasources
+# 3. Knowledge-Aware: Add context with Jira/Confluence datasources
+# 4. Tool-Enabled: Add toolkits for Git, PM, APIs
+# 5. Hierarchical: Add sub_assistants for delegation
+# 6. MCP-Enhanced: Add mcp_servers for external integrations
+#
+# Best Practices:
+# - Use low temperature (0.1-0.3) for deterministic tasks (code review, data extraction)
+# - Use medium temperature (0.4-0.7) for balanced tasks (BA work, documentation)
+# - Use high temperature (0.8-1.0) for creative tasks (brainstorming, writing)
+# - Always set is_global: false for IaC-managed assistants
+# - Use conversation_starters to guide users
+# - Prefer $ref for tool definitions (cleaner, more maintainable)
+# - Use descriptive names (they're the primary identifier in name-based IaC)
+
+

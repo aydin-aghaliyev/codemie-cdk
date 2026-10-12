@@ -1,0 +1,18 @@
+# Array of code repositories
+- $ref: datasource_defaults.code
+  name: frontend-app
+  description: Frontend application repository
+  link: https://github.com/example/frontend-app
+  setting_id: $ref:imported.integrations.git_connection.id
+
+- $ref: datasource_defaults.code
+  name: backend-api
+  description: Backend API repository
+  link: https://github.com/example/backend-api
+  setting_id: $ref:imported.integrations.git_connection.id
+
+- $ref: datasource_defaults.code
+  name: shared-libs
+  description: Shared libraries repository
+  link: https://github.com/example/shared-libs
+  setting_id: $ref:imported.integrations.git_connection.id

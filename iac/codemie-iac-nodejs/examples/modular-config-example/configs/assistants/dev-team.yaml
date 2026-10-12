@@ -1,0 +1,18 @@
+# Dev Team assistants
+- name: Code Reviewer
+  description: Reviews code for best practices
+  prompt: ../../system_prompts/code-reviewer.prompt.md
+  model: gpt-4o
+  shared: true
+  temperature: 0.1
+
+- name: Codebase Digger
+  description: Analyzes codebase and answers questions
+  prompt: ../../system_prompts/codebase-digger.prompt.md
+  model: claude-3-5-sonnet
+  shared: true
+  temperature: 0.1
+  datasource_names:
+    - frontend-app
+    - backend-api
+    - shared-libs

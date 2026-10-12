@@ -1,0 +1,14 @@
+name: CEO Assistant
+description: Executive assistant with full access
+prompt: ../../system_prompts/ceo-assistant.prompt.md
+model: gpt-4o
+shared: false
+temperature: 0.3
+toolkits:
+  - toolkit: Project Management
+    tools:
+      - $ref: tool_definitions.jira_tool
+      - $ref: tool_definitions.confluence_tool
+datasource_names:
+  - Production Jira KB
+  - Production Confluence KB

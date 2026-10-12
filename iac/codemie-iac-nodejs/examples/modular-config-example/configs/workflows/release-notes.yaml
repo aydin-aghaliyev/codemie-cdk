@@ -1,0 +1,5 @@
+name: Release Notes Publication
+description: Automated release notes generation and publication
+definition: ../../workflows/release-notes.yaml
+mode: Sequential
+shared: true

@@ -1,0 +1,5 @@
+codemie_api_url: ${CODEMIE_API_URL}
+auth_server_url: ${CODEMIE_AUTH_URL}
+auth_realm_name: ${CODEMIE_REALM:-codemie}
+client_id: ${CODEMIE_CLIENT_ID}
+client_secret: ${CODEMIE_CLIENT_SECRET}

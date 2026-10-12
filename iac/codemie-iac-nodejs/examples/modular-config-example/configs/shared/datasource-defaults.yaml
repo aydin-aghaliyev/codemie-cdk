@@ -1,0 +1,19 @@
+code:
+  type: code
+  index_type: code
+  embeddings_model: ada-002
+  shared_with_project: true
+  branch: master
+  force_reindex: false
+
+jira:
+  type: knowledge_base_jira
+  embeddings_model: ada-002
+  shared_with_project: true
+  force_reindex: false
+
+confluence:
+  type: knowledge_base_confluence
+  embeddings_model: ada-002
+  shared_with_project: true
+  force_reindex: false

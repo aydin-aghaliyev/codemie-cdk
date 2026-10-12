@@ -1,0 +1,6 @@
+$ref: datasource_defaults.jira
+name: Production Jira KB
+description: Production Jira knowledge base
+setting_id: $ref:imported.integrations.jira_connection.id
+jql: project = PROD
+summarization_model: gpt-4.1

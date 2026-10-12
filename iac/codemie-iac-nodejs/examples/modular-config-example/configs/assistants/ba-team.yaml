@@ -1,0 +1,26 @@
+# BA Team assistants
+- name: BA Reviewer
+  description: Reviews business analysis artifacts
+  prompt: ../../system_prompts/ba-reviewer.prompt.md
+  model: claude-3-7
+  shared: true
+  temperature: 0.1
+  toolkits:
+    - toolkit: Project Management
+      tools:
+        - $ref: tool_definitions.jira_tool
+        - $ref: tool_definitions.confluence_tool
+
+- name: BA Helper
+  description: Assists with creating BA artifacts
+  prompt: ../../system_prompts/ba-helper.prompt.md
+  model: gpt-4.1
+  shared: true
+  temperature: 0.1
+  sub_assistants:
+    - BA Reviewer
+  toolkits:
+    - toolkit: Project Management
+      tools:
+        - $ref: tool_definitions.jira_tool
+        - $ref: tool_definitions.confluence_tool

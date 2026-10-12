@@ -1,0 +1,51 @@
+name: Drift
+
+# Weekly check that the package still builds and passes against the newest
+# codemie-sdk inside the supported range. The job summary shows which version was installed.
+on:
+  schedule:
+    - cron: '17 5 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  latest-sdk:
+    name: Latest codemie-sdk in range
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: iac/codemie-iac-nodejs
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: '22'
+
+      # The package has no committed lock file; dependencies are always resolved fresh.
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Report installed codemie-sdk version
+        run: echo "codemie-sdk $(node -p "require('./node_modules/codemie-sdk/package.json').version")" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Biome lint
+        run: npx biome lint ./src
+
+      - name: Biome format check
+        run: npx biome format ./src
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Build
+        run: npm run build

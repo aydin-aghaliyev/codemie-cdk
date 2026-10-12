@@ -1,0 +1,5 @@
+name: Test Case Automation
+description: Automated test case generation workflow
+definition: ../../workflows/test-automation.yaml
+mode: Sequential
+shared: true

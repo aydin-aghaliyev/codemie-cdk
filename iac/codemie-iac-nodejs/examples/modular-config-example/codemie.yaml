@@ -1,0 +1,43 @@
+# Example: Modular Configuration with $import
+# This demonstrates how to organize a large project using imports
+
+version: 1
+
+project:
+  name: example-project
+  description: Example project with modular configuration
+
+# Import environment and shared configs
+environment:
+  $import: configs/environment.yaml
+
+imported:
+  $import: configs/imported.yaml
+
+tool_definitions:
+  $import: configs/shared/tool-definitions.yaml
+
+datasource_defaults:
+  $import: configs/shared/datasource-defaults.yaml
+
+# Resources organized by type and team
+resources:
+  datasources:
+    # Individual files for critical resources
+    - $import: configs/datasources/production-jira.yaml
+    - $import: configs/datasources/production-confluence.yaml
+    
+    # Array file for simple code repositories
+    - $import: configs/datasources/code-repos.yaml
+  
+  assistants:
+    # Group by team
+    - $import: configs/assistants/ba-team.yaml
+    - $import: configs/assistants/dev-team.yaml
+    
+    # Individual file for VIP assistant
+    - $import: configs/assistants/ceo-assistant.yaml
+  
+  workflows:
+    - $import: configs/workflows/test-automation.yaml
+    - $import: configs/workflows/release-notes.yaml

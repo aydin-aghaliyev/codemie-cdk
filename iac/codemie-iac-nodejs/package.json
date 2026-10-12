@@ -1,0 +1,74 @@
+{
+  "name": "@codemieai/cdk",
+  "version": "0.2.0",
+  "type": "module",
+  "description": "Infrastructure as Code solution for managing Codemie AI assistants, datasources, and workflows through declarative YAML configuration",
+  "author": "CodeMie",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/codemie-ai/codemie-cdk.git"
+  },
+  "homepage": "https://github.com/codemie-ai/codemie-cdk#readme",
+  "bugs": {
+    "url": "https://github.com/codemie-ai/codemie-cdk/issues"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "bin": {
+    "codemie": "./dist/cli/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "biome": "biome lint --write ./src",
+    "biome:check": "biome lint ./src",
+    "build": "tsup",
+    "clean": "rm -rf dist",
+    "format": "biome format --write ./src",
+    "format:check": "biome format ./src",
+    "lint": "npm-run-all types:check biome:check format:check",
+    "lint:check": "npm-run-all types:check biome:check",
+    "lint:fix": "npm-run-all types:check biome format",
+    "test": "jest --silent --passWithNoTests",
+    "test:ci": "jest --silent --coverage --ci",
+    "test:coverage": "jest --silent --coverage",
+    "test:watch": "jest --watch",
+    "types:check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@commander-js/extra-typings": "^14.0.0",
+    "codemie-sdk": ">=0.1.0 <1.0.0",
+    "dotenv": "^17.2.3",
+    "ora": "^8.2.0",
+    "p-limit": "^7.2.0",
+    "yaml": "^2.8.1",
+    "zod": "4.3.5"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.3.8",
+    "@swc/core": "^1.15.2",
+    "@swc/jest": "^0.2.39",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^20.10.0",
+    "jest": "^30.2.0",
+    "npm-run-all2": "8.0.4",
+    "ts-node": "^10.9.2",
+    "tsup": "^8.0.2",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  }
+}

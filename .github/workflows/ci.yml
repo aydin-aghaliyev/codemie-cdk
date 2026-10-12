@@ -1,0 +1,188 @@
+name: CI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  install:
+    name: Fresh install
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: iac/codemie-iac-nodejs
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: '22'
+
+      # The package has no committed lock file; dependencies are always resolved fresh.
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Report installed codemie-sdk version
+        run: echo "codemie-sdk $(node -p "require('./node_modules/codemie-sdk/package.json').version")" >> "$GITHUB_STEP_SUMMARY"
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: iac/codemie-iac-nodejs
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: '22'
+
+      # The package has no committed lock file; dependencies are always resolved fresh.
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Report installed codemie-sdk version
+        run: echo "codemie-sdk $(node -p "require('./node_modules/codemie-sdk/package.json').version")" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Biome lint
+        run: npx biome lint ./src
+
+      - name: Biome format check
+        run: npx biome format ./src
+
+  test:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: iac/codemie-iac-nodejs
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: '22'
+
+      # The package has no committed lock file; dependencies are always resolved fresh.
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Report installed codemie-sdk version
+        run: echo "codemie-sdk $(node -p "require('./node_modules/codemie-sdk/package.json').version")" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Unit tests
+        run: npm test
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: iac/codemie-iac-nodejs
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: '22'
+
+      # The package has no committed lock file; dependencies are always resolved fresh.
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Report installed codemie-sdk version
+        run: echo "codemie-sdk $(node -p "require('./node_modules/codemie-sdk/package.json').version")" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Build
+        run: npm run build
+
+  python:
+    name: Python IaC
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: iac/codemie-iac-python
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Install Poetry
+        run: pipx install poetry
+
+      - name: Install dependencies
+        run: poetry install --no-interaction
+
+      - name: Lint
+        run: poetry run ruff check .
+
+      - name: Format check
+        run: poetry run ruff format --check .
+
+      - name: Unit tests
+        run: poetry run pytest tests/
+
+      - name: Build package
+        run: poetry build
+
+  scan:
+    name: Internal references and secrets
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Scan for internal references
+        run: python3 scripts/scan_internal_refs.py --tree .
+
+      # The gitleaks CLI image is used instead of gitleaks-action, which needs a
+      # license for organization-owned repositories.
+      - name: Run gitleaks
+        run: >
+          docker run --rm -v "$PWD:/repo"
+          ghcr.io/gitleaks/gitleaks:v8.24.3
+          detect --source /repo --no-git --config /repo/.gitleaks.toml --redact --verbose
+
+  pr-title:
+    name: PR title
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Validate Conventional Commits title
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          pattern='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-zA-Z0-9._/-]+\))?!?: .+'
+          if ! [[ "$PR_TITLE" =~ $pattern ]]; then
+            echo "PR title must follow Conventional Commits: <type>(<optional scope>): <description>"
+            echo "Allowed types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert"
+            exit 1
+          fi

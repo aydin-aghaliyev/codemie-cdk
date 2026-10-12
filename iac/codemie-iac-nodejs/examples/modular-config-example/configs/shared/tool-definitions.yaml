@@ -1,0 +1,13 @@
+jira_tool:
+  name: generic_jira_tool
+  label: Generic Jira
+  settings_config: false
+  settings:
+    $ref: imported.integrations.jira_connection
+
+confluence_tool:
+  name: generic_confluence_tool
+  label: Generic Confluence
+  settings_config: false
+  settings:
+    $ref: imported.integrations.confluence_connection

@@ -1,0 +1,583 @@
+# ============================================
+# DATASOURCE CONFIGURATION EXAMPLES
+# ============================================
+#
+# This file contains detailed examples for creating datasources in Codemie.
+# Based on codemie-sdk v1.x DatasourceMapper (src/mappers/datasource.mapper.ts)
+# and DataSourceType constants (src/models/datasource.ts)
+#
+# All examples are based on actual SDK schemas and real-world configurations.
+
+# ============================================
+# DATASOURCE DEFAULTS WITH $ref
+# ============================================
+#
+# To avoid repeating common fields, use $ref to inherit from datasource_defaults:
+#
+# datasource_defaults:
+#   code:
+#     type: code
+#     index_type: code
+#     embeddings_model: ada-002
+#     shared_with_project: true
+#     branch: master
+#     force_reindex: false
+#
+# resources:
+#   datasources:
+#     - $ref: datasource_defaults.code  # ← Inherit all fields
+#       name: my-repo
+#       description: My repository
+#       link: https://git.example.com/repo
+#       setting_id: $ref:imported.integrations.git_conn.id
+#       # type, branch, embeddings_model, etc. from $ref!
+
+# ============================================
+# DATASOURCE STRUCTURE IN CODEMIE.YAML
+# ============================================
+#
+# In codemie.yaml, datasources are defined in the resources section:
+#
+# resources:
+#   datasources:
+#     - $ref: datasource_defaults.code  # OPTIONAL: Inherit common fields
+#       name: my-datasource             # REQUIRED: Unique name
+#       type: code                      # REQUIRED: Datasource type (can come from $ref)
+#       description: Description        # REQUIRED: What this datasource contains
+#       # Type-specific fields (see examples below)
+
+# ============================================
+# AVAILABLE DATASOURCE TYPES (SDK Reference)
+# ============================================
+#
+# From DataSourceType (lines 427-438 in index.js):
+#
+# - code                        # Git repository code
+# - knowledge_base_confluence   # Confluence pages
+# - knowledge_base_jira         # Jira issues
+# - knowledge_base_file         # Uploaded files
+# - llm_routing_google          # Google Docs
+# - knowledge_base_json         # JSON data
+# - knowledge_base_bedrock      # AWS Bedrock
+# - provider                    # Provider-specific
+# - summary                     # Summary index
+# - chunk-summary               # Chunked summary index
+
+# ============================================
+# SDK-COMPATIBLE FIELD NAMES
+# ============================================
+#
+# All field names in this file are SDK-compatible (match codemie-sdk):
+#
+# - link (NOT repository_url)
+# - setting_id (NOT integration_id)  
+# - jql (NOT jira.jql - flat structure)
+# - cql (NOT confluence.cql - flat structure)
+#
+# ============================================
+# INTEGRATION REFERENCES ($ref:)
+# ============================================
+#
+# For datasources, setting_id must reference the integration UUID directly.
+# Always use the .id suffix:
+#
+#   setting_id: $ref:imported.integrations.git_conn.id
+#
+# This resolves to the integration UUID string (e.g., "f1e53ba4-5ab1-4c05-ad8f...")
+#
+# For toolkits, you reference the full integration object (no .id suffix):
+#
+#   settings:
+#     $ref: imported.integrations.git_conn
+#
+# This resolves to the complete integration object with all fields
+# - shared_with_project = project_space_visible (both accepted)
+#
+# These names match the SDK DatasourceMapper expectations exactly.
+
+# ============================================
+# 1. CODE DATASOURCE (GIT REPOSITORY)
+# ============================================
+# Most common type: Git repository indexing
+
+# Minimal code datasource (Format 1: object reference)
+code_minimal:
+  name: backend-repo
+  type: code
+  description: Backend API repository
+  link: https://git.example.com/org/backend
+  branch: master
+  setting_id: $ref:imported.integrations.git_connection.id
+
+# Same datasource with explicit .id reference (Format 2)
+code_minimal_explicit:
+  name: backend-repo-explicit
+  type: code
+  description: Backend API repository (explicit .id reference)
+  link: https://git.example.com/org/backend
+  branch: master
+  setting_id: $ref:imported.integrations.git_connection.id  # ← Explicit .id
+
+# Full code datasource with all options
+code_full:
+  name: frontend-app-full
+  type: code
+  description: Frontend application with custom indexing
+  link: https://git.example.com/org/frontend
+  branch: develop
+  setting_id: $ref:imported.integrations.git_connection.id
+  index_type: code                    # Index type (usually "code")
+  embeddings_model: ada-002           # Embeddings model for vector search
+  summarization_model: gpt-4o-mini    # Model for generating summaries
+  shared_with_project: true           # Share with project members
+  force_reindex: false                # Force full reindex on update
+  # File filtering
+  paths:                              # Include only these patterns
+    - "*.ts"
+    - "*.tsx"
+    - "*.js"
+    - "*.jsx"
+    - "*.json"
+    - "*.md"
+  files_filter:                       # Alternative: exclude patterns
+    exclude:
+      - "node_modules/**"
+      - "dist/**"
+      - "build/**"
+      - "*.test.ts"
+      - "*.spec.ts"
+
+# Code datasource with docs generation
+code_with_docs:
+  name: api-with-docs
+  type: code
+  description: API repository with auto-generated documentation
+  link: https://git.example.com/org/api
+  branch: main
+  setting_id: $ref:imported.integrations.git_connection.id
+  docs_generation: true               # Enable automatic docs generation
+  prompt: |                           # Custom prompt for docs generation
+    Generate comprehensive API documentation from this code.
+    Include function signatures, parameters, return types, and examples.
+
+# Code datasource using datasource_defaults
+code_with_defaults:
+  name: shared-libraries
+  type: code
+  description: Shared utility libraries
+  link: https://git.example.com/org/shared-libs
+  branch: master
+  setting_id: $ref:imported.integrations.git_connection.id
+  # All other fields inherited from datasource_defaults.code in codemie.yaml:
+  # - index_type: code
+  # - embeddings_model: ada-002
+  # - shared_with_project: true
+  # - force_reindex: false
+
+# ============================================
+# 2. JIRA DATASOURCE (KNOWLEDGE BASE)
+# ============================================
+# Index Jira issues for context
+
+# Minimal Jira datasource
+jira_minimal:
+  name: project-jira-issues
+  type: knowledge_base_jira
+  description: All project Jira issues
+  setting_id: $ref:imported.integrations.jira_connection.id
+  jql: project = MYPROJECT
+
+# Full Jira datasource with complex JQL
+jira_full:
+  name: active-bugs-features
+  type: knowledge_base_jira
+  description: Active bugs and feature requests
+  setting_id: $ref:imported.integrations.jira_connection.id
+  jql: |
+    project in (PROJECT1, PROJECT2)
+    AND status != Closed
+    AND issuetype in (Bug, Story, Task)
+    AND created >= -90d
+  embeddings_model: ada-002
+  summarization_model: gpt-4.1
+  shared_with_project: true
+  project_space_visible: true         # Alternative name for shared_with_project
+  force_reindex: false
+
+# Multiple projects Jira datasource
+jira_multi_project:
+  name: all-team-issues
+  type: knowledge_base_jira
+  description: Issues from all team projects
+  setting_id: $ref:imported.integrations.jira_connection.id
+  jql: project in (PROJ1, PROJ2, PROJ3) AND status in (Open, "In Progress", "In Review")
+  embeddings_model: ada-002
+  shared_with_project: true
+
+# ============================================
+# 3. CONFLUENCE DATASOURCE (KNOWLEDGE BASE)
+# ============================================
+# Index Confluence pages for documentation
+
+# Minimal Confluence datasource
+confluence_minimal:
+  name: team-docs
+  type: knowledge_base_confluence
+  description: Team documentation space
+  setting_id: $ref:imported.integrations.confluence_connection.id
+  cql: space = TEAMDOCS
+
+# Full Confluence datasource with all options
+confluence_full:
+  name: product-documentation
+  type: knowledge_base_confluence
+  description: Complete product documentation
+  setting_id: $ref:imported.integrations.confluence_connection.id
+  cql: space in (PROD, ARCH, API) AND type = page
+  include_restricted_content: false     # Include restricted pages
+  include_archived_content: false       # Include archived pages
+  include_attachments: true             # Index attachments
+  include_comments: false               # Include page comments
+  keep_markdown_format: true            # Preserve markdown formatting
+  keep_newlines: true                   # Preserve newline characters
+  max_pages: 1000                       # Maximum pages to index
+  pages_per_request: 50                 # Pagination size
+  embeddings_model: ada-002
+  summarization_model: gpt-4.1
+  shared_with_project: true
+  force_reindex: false
+
+# Multiple spaces Confluence datasource
+confluence_multi_space:
+  name: all-documentation
+  type: knowledge_base_confluence
+  description: Documentation from multiple spaces
+  setting_id: $ref:imported.integrations.confluence_connection.id
+  cql: |
+    space in (TEAMDOCS, PRODOCS, ARCHDOCS)
+    AND (label = "important" OR label = "tutorial")
+  include_attachments: true
+  keep_markdown_format: true
+  embeddings_model: ada-002
+  shared_with_project: true
+
+# ============================================
+# 4. FILE DATASOURCE (UPLOADED FILES)
+# ============================================
+# Upload files directly (not via Git)
+
+# Note: File datasources are created differently in IaC
+# You need to provide file content, not just references
+# This is typically done programmatically
+
+file_datasource:
+  name: uploaded-docs
+  type: knowledge_base_file
+  description: Manually uploaded documentation files
+  # Files are uploaded during creation, not stored in config
+  # See SDK: createFileDatasource method (lines 608-624)
+  files:
+    - name: architecture.pdf
+      content: <binary-content>
+      mime_type: application/pdf
+    - name: api-spec.json
+      content: <json-content>
+      mime_type: application/json
+  embeddings_model: ada-002
+  shared_with_project: true
+
+# ============================================
+# 5. GOOGLE DOCS DATASOURCE
+# ============================================
+# Index Google Docs for context
+
+google_doc_datasource:
+  name: team-gdocs
+  type: llm_routing_google
+  description: Team Google Documents
+  setting_id: $ref:imported.integrations.google_connection.id
+  google_doc:
+    doc_id: 1234567890abcdef        # Google Doc ID
+    # or
+    doc_url: https://docs.google.com/document/d/1234567890abcdef
+  embeddings_model: ada-002
+  shared_with_project: true
+
+# ============================================
+# REAL-WORLD EXAMPLES (FROM CODEMIE.YAML)
+# ============================================
+
+# Example 1: Simple code repo
+assistant_resources:
+  name: assistant-resources
+  type: code
+  description: Assistant Resources Repository
+  link: https://github.com/example/assistant-resources
+  branch: master
+  setting_id: $ref:imported.integrations.git_server_connection.id
+  index_type: code
+  embeddings_model: ada-002
+  shared_with_project: true
+  force_reindex: false
+
+# Example 2: Code repo with file filtering
+browser_extension:
+  name: browser-extension
+  type: code
+  description: Browser extension source code
+  link: https://github.com/example/browser-extension
+  branch: master
+  setting_id: $ref:imported.integrations.git_server_connection.id
+  paths:
+    - "*.ts"
+    - "*.tsx"
+    - "*.json"
+    - "*.md"
+
+# Example 3: Jira with multiple projects
+team_jira_issues:
+  name: Jira-TeamIssues
+  type: knowledge_base_jira
+  description: Integration with team Jira projects
+  setting_id: $ref:imported.integrations.jira_server_read_write_connection.id
+  jql: project in (PROJ, PROJB)
+  embeddings_model: ada-002
+  summarization_model: gpt-4.1
+  project_space_visible: true
+  shared_with_project: true
+  force_reindex: false
+
+# Example 4: Confluence with multiple spaces
+team_confluence_docs:
+  name: Confluence-TeamDocs
+  type: knowledge_base_confluence
+  description: Team Confluence spaces for SDLC documentation
+  setting_id: $ref:imported.integrations.confluence_server_read_write_connection.id
+  cql: space=SPACE or space=SPACEB or space=SPACEC or space=SPACED
+  embeddings_model: ada-002
+  summarization_model: gpt-4.1
+  project_space_visible: true
+  shared_with_project: true
+  force_reindex: false
+
+# ============================================
+# DATASOURCE UPDATE OPERATIONS
+# ============================================
+#
+# When updating datasources, you can control reindexing:
+#
+# update_params:
+#   full_reindex: true              # Reindex all content from scratch
+#   skip_reindex: false             # Skip reindexing (metadata only)
+#   resume_indexing: false          # Resume interrupted indexing
+#   incremental_reindex: false      # Index only new/changed content
+#
+# Reindex support by type (validated by SDK):
+# - CODE:       full_reindex, resume_indexing (NOT incremental)
+# - JIRA:       full_reindex, incremental_reindex (NOT resume)
+# - CONFLUENCE: full_reindex, resume_indexing (NOT incremental)
+# - GOOGLE:     full_reindex only
+
+# ============================================
+# FIELD DESCRIPTIONS & NOTES
+# ============================================
+#
+# name (REQUIRED):
+#   - Unique identifier for datasource
+#   - Cannot be changed after creation (name-based IaC)
+#   - Used for referencing in assistant context
+#
+# type (REQUIRED):
+#   - Datasource type (see AVAILABLE DATASOURCE TYPES above)
+#   - Determines which type-specific fields are available
+#
+# description (REQUIRED):
+#   - Human-readable description
+#   - Displayed in UI
+#
+# link (CODE only, REQUIRED):
+#   - Git repository URL
+#   - SDK field name: link (matches API)
+#
+# branch (CODE only):
+#   - Git branch to index
+#   - Default: master/main
+#
+# setting_id (REQUIRED for CODE, JIRA, CONFLUENCE):
+#   - Reference to integration (Git, Jira, Confluence)
+#   - Use $ref:imported.integrations.alias_key
+#   - SDK field name: setting_id (matches API)
+#
+# jql (JIRA only, REQUIRED):
+#   - JQL query to filter issues
+#   - SDK structure: flat field (jql: "query")
+#   - No nesting required
+#
+# cql (CONFLUENCE only, REQUIRED):
+#   - CQL query to filter pages
+#   - SDK structure: flat field (cql: "query")
+#   - No nesting required
+#
+# index_type (CODE only):
+#   - Type of index (usually "code")
+#   - Other values: "summary", "chunk-summary"
+#
+# embeddings_model (OPTIONAL):
+#   - Model for generating embeddings
+#   - Default: ada-002
+#   - Check available: client.llms.listEmbeddings()
+#
+# summarization_model (OPTIONAL):
+#   - Model for generating summaries
+#   - Common: gpt-4o-mini, gpt-4.1
+#
+# shared_with_project (OPTIONAL):
+#   - Whether datasource is shared with project members
+#   - Default: true
+#   - API field name: project_space_visible
+#
+# force_reindex (OPTIONAL):
+#   - Force full reindex on next update
+#   - Default: false
+#
+# paths (CODE only, OPTIONAL):
+#   - Include only matching file patterns
+#   - Array of glob patterns
+#
+# files_filter (CODE only, OPTIONAL):
+#   - Exclude matching file patterns
+#   - Object with exclude array
+#
+# docs_generation (CODE only, OPTIONAL):
+#   - Enable automatic documentation generation
+#   - Default: false
+#
+# prompt (CODE only, OPTIONAL):
+#   - Custom prompt for docs generation
+#   - Used when docs_generation: true
+
+# ============================================
+# COMMON PATTERNS
+# ============================================
+#
+# 1. Single Repository: Basic code datasource with branch
+# 2. Filtered Repository: Use paths or files_filter to include/exclude
+# 3. Multiple Projects: Use JQL/CQL with "project in" or "space in"
+# 4. Active Issues Only: Add status filters in JQL
+# 5. Recent Content: Use date filters in JQL (created >= -90d)
+# 6. Documentation Focus: Confluence with specific labels or types
+#
+# Best Practices:
+# - Use descriptive names (they're the primary identifier)
+# - Always set shared_with_project: true for team datasources
+# - Use datasource_defaults in codemie.yaml to reduce repetition
+# - Filter aggressively with paths/JQL/CQL to reduce noise
+# - Use $ref for integration_id (cleaner, more maintainable)
+# - Monitor token usage and file counts after indexing
+# - Use force_reindex: false unless you need a complete rebuild
+
+# ============================================
+# DATASOURCE DEFAULTS IN CODEMIE.YAML
+# ============================================
+#
+# Define common defaults to avoid repetition:
+#
+# datasource_defaults:
+#   code:
+#     type: code
+#     index_type: code
+#     embeddings_model: ada-002
+#     shared_with_project: true
+#     branch: master
+#     force_reindex: false
+#   
+#   jira:
+#     type: knowledge_base_jira
+#     embeddings_model: ada-002
+#     shared_with_project: true
+#   
+#   confluence:
+#     type: knowledge_base_confluence
+#     embeddings_model: ada-002
+#     shared_with_project: true
+#
+# Then in datasources, defaults are automatically applied:
+#
+# datasources:
+#   - name: my-repo
+#     # type: code (from defaults)
+#     # index_type: code (from defaults)
+#     # embeddings_model: ada-002 (from defaults)
+#     # shared_with_project: true (from defaults)
+#     # branch: master (from defaults)
+#     # force_reindex: false (from defaults)
+#     link: https://...
+#     setting_id: $ref:...
+
+# ============================================
+# PRACTICAL EXAMPLES WITH $ref
+# ============================================
+#
+# Example configuration using datasource_defaults:
+
+datasource_defaults:
+  # Code repository defaults
+  code:
+    type: code
+    index_type: code
+    embeddings_model: ada-002
+    shared_with_project: true
+    branch: master
+    force_reindex: false
+  
+  # Jira KB defaults
+  jira:
+    type: knowledge_base_jira
+    embeddings_model: ada-002
+    shared_with_project: true
+    force_reindex: false
+
+resources:
+  datasources:
+    # Minimal code datasource - inherits most fields
+    - $ref: datasource_defaults.code
+      name: frontend-app
+      description: Frontend React application
+      link: https://git.example.com/frontend
+      setting_id: $ref:imported.integrations.git_conn.id
+    
+    # Override specific fields
+    - $ref: datasource_defaults.code
+      name: backend-api
+      description: Backend API service
+      link: https://git.example.com/backend
+      setting_id: $ref:imported.integrations.git_conn.id
+      branch: develop  # ← Override default branch
+      paths:  # ← Additional field
+        - "src/**/*.ts"
+        - "*.json"
+    
+    # Jira knowledge base
+    - $ref: datasource_defaults.jira
+      name: jira-issues
+      description: Project issues from Jira
+      setting_id: $ref:imported.integrations.jira_conn.id
+      jql: project = MYPROJECT AND status != Closed
+
+# ============================================
+# SDK API PATHS (FOR REFERENCE)
+# ============================================
+#
+# Create:
+# - CODE: POST /v1/application/{project_name}/index
+# - KB:   POST /v1/index/knowledge_base/{type}
+#
+# Update:
+# - CODE: PUT /v1/application/{project_name}/index/{name}
+# - KB:   PUT /v1/index/knowledge_base/{type}
+#
+# List:   GET /v1/index
+# Get:    GET /v1/index/{datasource_id}
+# Delete: DELETE /v1/index/{datasource_id}
+
+

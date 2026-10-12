@@ -1,0 +1,16 @@
+assistants: []
+datasources: []
+skills: []
+integrations:
+  jira_connection:
+    id: example-jira-integration-id
+    type: Jira
+    alias: Jira Server Connection
+  confluence_connection:
+    id: example-confluence-integration-id
+    type: Confluence
+    alias: Confluence Server Connection
+  git_connection:
+    id: example-git-integration-id
+    type: Git
+    alias: Git Server Connection
