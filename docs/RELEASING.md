@@ -1,12 +1,17 @@
 # Releasing
 
-`@codemieai/cdk` is released by the GitHub Actions workflow `publish.yml`. A release starts when someone with write access publishes a GitHub Release whose tag names the version.
+`@codemieai/cdk` and `codemie-iac-python` are released by the GitHub Actions workflows `publish.yml` and `publish-python.yml`. A release starts when someone with write access publishes a GitHub Release whose tag names the version.
 
 | Package | Registry | Workflow | Tag |
 |---------|----------|----------|-----|
 | `@codemieai/cdk` (`iac/codemie-iac-nodejs`) | npm | `publish.yml` | `cdk-vX.Y.Z` or `cdk-vX.Y.Z-rcN` |
+| `codemie-iac-python` (`iac/codemie-iac-python`) | PyPI | `publish-python.yml` | `iac-python-vX.Y.Z` or `iac-python-vX.Y.ZrcN` |
 
-`codemie-iac-python` (`iac/codemie-iac-python`) is not published. CI checks and builds it, nothing more.
+The steps below use `@codemieai/cdk` as the example. `codemie-iac-python` follows the same flow, with these differences:
+
+- The base line is the `version` in `iac/codemie-iac-python/pyproject.toml` (`0.1.0` today).
+- The workflow runs lint, the format check, tests and `poetry build`, then uploads the wheel and sdist to PyPI.
+- The version is compared with the live PyPI index, not npm.
 
 A merge to `main` never releases the package. A tag with another prefix does not start the workflow.
 
@@ -35,20 +40,28 @@ The `verify` job has no secrets. It fails, and nothing is published, when:
 - the tagged commit is not on `main`;
 - for a manual publish, the tag does not exist or does not point to the dispatched commit;
 - the tag prefix, format or line does not match;
-- the version is equal to or lower than the highest published version (`scripts/release/check_version.py --version`);
+- the version is equal to or lower than the highest published version (`check_version.py` from `codemie-ai/ci-workflows`);
 - lint, tests or the build fail.
 
 The `publish` job runs the version check again right before the upload, because it can wait for approval and another release may land in between.
 
-`scripts/release/check_version.py` compares the version with the live npm registry. The scoped name `@codemieai/cdk` is URL-encoded for the registry request.
+`check_version.py` compares the version with the live npm registry. The scoped name `@codemieai/cdk` is URL-encoded for the registry request.
 
 - A package that is not on the registry yet (HTTP 404) has no latest version. The check passes.
 - A timeout, network error, malformed registry response or a published version that cannot be parsed stops the release. The gate fails closed.
 
-Print the version a tag names (no network):
+Run it locally:
 
 ```bash
-python3 scripts/release/check_version.py --ecosystem npm --name @codemieai/cdk --tag cdk-v0.2.1 --base 0.2.0 --tag-prefix cdk-v
+curl -fsSL https://raw.githubusercontent.com/codemie-ai/ci-workflows/main/scripts/release/check_version.py \
+  | python3 -I - --ecosystem npm --name @codemieai/cdk --version 0.2.1
+```
+
+Read the version from a release tag and check its format and baseline (does not contact npm):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/codemie-ai/ci-workflows/main/scripts/release/check_version.py \
+  | python3 -I - --ecosystem npm --name @codemieai/cdk --tag cdk-v0.2.1 --base 0.2.0 --tag-prefix cdk-v
 ```
 
 ## Dry run
@@ -66,3 +79,4 @@ An administrator does these steps once. This document only lists them.
 - **Who can release.** Only people with write access can create a Release. Keep that group small.
 - **npm trusted publisher.** The workflow publishes with OpenID Connect, so no npm token is stored. In the npm settings of `@codemieai/cdk`, add a trusted publisher: repository `codemie-ai/codemie-cdk`, workflow `publish.yml`, environment `release`. Only the `publish` job has the `id-token: write` permission.
 - **First commit.** Push the first exported snapshot to the new repository as a single commit. The export carries no history.
+- **PyPI trusted publisher.** `publish-python.yml` publishes with OpenID Connect too. In the PyPI project `codemie-iac-python`, add a trusted publisher: owner `codemie-ai`, repository `codemie-cdk`, workflow `publish-python.yml`, environment `release`. For the first release, add it as a pending publisher.
